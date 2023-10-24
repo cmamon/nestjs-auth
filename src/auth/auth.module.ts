@@ -8,6 +8,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { EmailService } from '../email/email.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { EmailService } from '../email/email.service';
     EmailService,
     LocalStrategy,
     JwtStrategy,
+    PrismaService,
     RefreshTokenStrategy,
   ],
 })

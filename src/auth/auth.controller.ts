@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Get,
   Body,
+  Param,
 } from '@nestjs/common';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthService } from './auth.service';
@@ -50,6 +51,7 @@ export class AuthController {
     );
   }
 
+  @HttpCode(204)
   @UseGuards(AccessTokenGuard)
   @Get('logout')
   async logout(@Request() req) {
@@ -59,5 +61,15 @@ export class AuthController {
   @Get('verify-email')
   async verifyEmail(@Request() req) {
     return this.authService.verifyEmail(req.query.token);
+  }
+
+  @Get('reset-password/:email')
+  async sendResetPasswordEmail(@Param() params) {
+    await this.authService.sendResetPasswordEmail(params.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Request() req) {
+    return this.authService.resetPassword(req.body.token, req.body.password);
   }
 }

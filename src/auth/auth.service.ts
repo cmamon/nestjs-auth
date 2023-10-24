@@ -178,4 +178,87 @@ export class AuthService {
       throw new BadRequestException('Invalid confirmation token');
     }
   }
+
+  async sendResetPasswordEmail(email: string) {
+    const existingUser = await this.usersService.findOne({ email });
+
+    if (!existingUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (!existingUser.isEmailVerified) {
+      throw new BadRequestException('Email not verified');
+    }
+
+    const resetPasswordToken = this.jwtService.sign(
+      { email },
+      {
+        expiresIn: process.env.JWT_RESET_PASSWORD_TOKEN_EXPIRATION_TIME,
+        secret: process.env.JWT_RESET_PASSWORD_TOKEN_SECRET,
+      },
+    );
+
+    existingUser.resetPasswordToken = resetPasswordToken;
+
+    await this.usersService.updateUser({
+      where: { id: existingUser.id },
+      data: { resetPasswordToken },
+    });
+
+    const url = `${process.env.RESET_PASSWORD_URL}?token=${resetPasswordToken}`;
+    let text =
+      'You are receiving this email because you have requested the reset of the password for your account.\n\n';
+    text += `Please click on the following link ${url} to complete the process. The link will only be valid for 10 minutes.\n\n`;
+    text +=
+      'If you did not request this, please ignore this email and your password will remain unchanged.';
+
+    const mailOptions = {
+      to: email,
+      subject: `${process.env.APP_NAME} - Reset password`,
+      text,
+    };
+
+    return this.emailService.sendMail(mailOptions);
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: process.env.JWT_RESET_PASSWORD_TOKEN_SECRET,
+      });
+
+      if (typeof payload === 'object' && 'email' in payload) {
+        const user = await this.usersService.findOne({ email: payload.email });
+
+        if (!user) {
+          throw new BadRequestException('User not found');
+        }
+
+        if (!user.resetPasswordToken || user.resetPasswordToken !== token) {
+          throw new BadRequestException('Invalid reset password token');
+        }
+
+        const salt = await bcrypt.genSalt(
+          parseInt(process.env.BCRYPT_SALT_ROUNDS),
+        );
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        return await this.usersService.updateUser({
+          where: { id: user.id },
+          data: {
+            password: hashedPassword,
+            resetPasswordToken: null,
+          },
+        });
+      }
+
+      throw new BadRequestException('Invalid reset password token');
+    } catch (error) {
+      if (error?.name === 'TokenExpiredError') {
+        throw new BadRequestException('Reset password token expired');
+      }
+
+      throw new BadRequestException('Invalid reset password token');
+    }
+  }
 }
