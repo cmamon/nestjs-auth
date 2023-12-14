@@ -13,32 +13,34 @@ datasource db {
 // generate all models for a carpool application
 
 model User {
-  id                 Int            @id @default(autoincrement())
-  email              String         @unique
-  password           String
-  firstName          String         @default("")
-  lastName           String         @default("")
-  phone              String         @default("")
-  avatar             String?
-  birthDate          DateTime?
-  role               UserRole       @default(USER)
-  refreshToken       String?
-  resetPasswordToken String?
-  isEmailVerified    Boolean        @default(false)
-  isPhoneVerified    Boolean        @default(false)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  id                   Int            @id @default(autoincrement())
+  email                String         @unique
+  password             String
+  firstName            String         @default("")
+  lastName             String         @default("")
+  phone                String         @default("")
+  avatarUrl            String?
+  birthDate            DateTime?
+  role                 UserRole       @default(USER)
+  refreshToken         String?
+  resetPasswordToken   String?
+  isEmailVerified      Boolean        @default(false)
+  isPhoneVerified      Boolean        @default(false)
+  isBanned             Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
   // relationships
-  cars               Car[]
-  rides              Ride[]         @relation("PassengerRides")
-  reviews            RideReview[]
-  Ride               Ride[]
-  RideRequest        RideRequest[]
-  Chat               Chat?          @relation(fields: [chatId], references: [id])
-  chatId             Int?
-  Message            Message[]
-  Notification       Notification[]
-  Payment            Payment[]
+  cars                 Car[]
+  trips                Trip[]         @relation("PassengerTrips")
+  Trip                 Trip[]
+  UserReviewAuthor     UserReview[]   @relation("UserReviewAuthor")
+  UserReviewTargetUser UserReview[]   @relation("UserReviewTargetUser")
+  tripRequest          TripRequest[]
+  Chat                 Chat?          @relation(fields: [chatId], references: [id])
+  chatId               Int?
+  Message              Message[]
+  Notification         Notification[]
+  Payment              Payment[]
 }
 
 model Car {
@@ -52,39 +54,40 @@ model Car {
   // relationships
   owner     User     @relation(fields: [ownerId], references: [id])
   ownerId   Int
-  rides     Ride[]
+  trips     Trip[]
 }
 
-model Ride {
-  id            Int           @id @default(autoincrement())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+model Trip {
+  id             Int           @id @default(autoincrement())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   // relationships
-  driver        User          @relation(fields: [driverId], references: [id])
-  driverId      Int
-  car           Car           @relation(fields: [carId], references: [id])
-  carId         Int
-  passengers    User[]        @relation("PassengerRides")
-  RideReview    RideReview[]
-  RideRequest   RideRequest[]
-  Payment       Payment[]
-  Location      Location[] // the locations of the ride (from, to, etc)
-  chatId        Int?
+  driver         User          @relation(fields: [driverId], references: [id])
+  driverId       Int
+  car            Car           @relation(fields: [carId], references: [id])
+  carId          Int
+  passengers     User[]        @relation("PassengerTrips")
+  userReviews    UserReview[]
+  tripRequests   TripRequest[]
+  payments       Payment[]
+  locations      Location[] // the locations of the Trip (from, to, etc)
+  chatId         Int?
   // fields
-  fromLocation  String
-  fromLatitude  Float
-  fromLongitude Float
-  toLocation    String
-  toLatitude    Float
-  toLongitude   Float
-  departAt      DateTime
-  arriveAt      DateTime
-  price         Float
-  seats         Int
-  status        RideStatus
+  fromLocation   String
+  fromLatitude   Float
+  fromLongitude  Float
+  toLocation     String
+  toLatitude     Float
+  toLongitude    Float
+  departAt       DateTime
+  arriveAt       DateTime
+  price          Float
+  availableSeats Int
+  totalSeats     Int
+  status         TripStatus
 }
 
-enum RideStatus {
+enum TripStatus {
   PENDING
   ACTIVE
   COMPLETED
@@ -96,26 +99,28 @@ enum UserRole {
   USER
 }
 
-model RideReview {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model UserReview {
+  id           Int      @id @default(autoincrement())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   // relationships
-  ride        Ride     @relation(fields: [rideId], references: [id])
-  rideId      Int
-  passenger   User     @relation(fields: [passengerId], references: [id])
-  passengerId Int
-  rating      Int
-  comment     String?
+  author       User     @relation(fields: [authorId], references: [id], name: "UserReviewAuthor")
+  authorId     Int
+  targetUser   User     @relation(fields: [targetUserId], references: [id], name: "UserReviewTargetUser")
+  targetUserId Int
+  trip         Trip     @relation(fields: [tripId], references: [id])
+  tripId       Int
+  comment      String
+  rating       Int
 }
 
-model RideRequest {
+model TripRequest {
   id          Int           @id @default(autoincrement())
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   // relationships
-  ride        Ride          @relation(fields: [rideId], references: [id])
-  rideId      Int
+  trip        Trip          @relation(fields: [tripId], references: [id])
+  tripId      Int
   passenger   User          @relation(fields: [passengerId], references: [id])
   passengerId Int
   status      RequestStatus
@@ -164,8 +169,8 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   // relationships
-  ride      Ride     @relation(fields: [rideId], references: [id])
-  rideId    Int
+  trip      Trip     @relation(fields: [tripId], references: [id])
+  tripId    Int
   address   String
   lat       Float
   lng       Float
@@ -176,8 +181,8 @@ model Payment {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   // relationships
-  ride      Ride          @relation(fields: [rideId], references: [id])
-  rideId    Int
+  trip      Trip          @relation(fields: [tripId], references: [id])
+  tripId    Int
   payer     User          @relation(fields: [payerId], references: [id])
   payerId   Int
   amount    Float
