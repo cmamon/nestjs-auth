@@ -62,11 +62,16 @@ export class AuthService {
   }
 
   async register(user: any) {
-    const { email, password } = user;
+    let { email, password } = user;
 
     if (!email || !password) {
       throw new BadRequestException('email and password are required');
     }
+
+    email = email.trim();
+    email = email.toLowerCase();
+
+    password = password.trim();
 
     const existingUser = await this.usersService.findOne({ email });
 
@@ -125,7 +130,7 @@ export class AuthService {
     });
   }
 
-  sendVerificationEmail(email: string) {
+  sendVerificationEmail(email: string, origin: string) {
     const verificationToken = this.jwtService.sign(
       { email },
       {
@@ -134,7 +139,8 @@ export class AuthService {
       },
     );
 
-    const url = `${process.env.EMAIL_VERIFICATION_URL}?token=${verificationToken}`;
+    const clientUrl = `${origin}`;
+    const url = `${process.env.EMAIL_VERIFICATION_URL}?token=${verificationToken}&redirectUri=${clientUrl}`;
     const text = `Welcome to ${process.env.APP_NAME}, \n\nPlease click on the following link ${url} to verify your account.`;
 
     const mailOptions = {
@@ -152,24 +158,24 @@ export class AuthService {
         secret: process.env.JWT_EMAIL_VERIFICATION_TOKEN_SECRET,
       });
 
-      if (typeof payload === 'object' && 'email' in payload) {
-        const user = await this.usersService.findOne({ email: payload.email });
-
-        if (!user) {
-          throw new BadRequestException('User not found');
-        }
-
-        if (user.isEmailVerified) {
-          throw new BadRequestException('Email already verified');
-        }
-
-        return await this.usersService.updateUser({
-          where: { id: user.id },
-          data: { isEmailVerified: true },
-        });
+      if (typeof payload !== 'object' || !('email' in payload)) {
+        throw new BadRequestException('Invalid confirmation token');
       }
 
-      throw new BadRequestException('Invalid confirmation token');
+      const user = await this.usersService.findOne({ email: payload.email });
+
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      if (user.isEmailVerified) {
+        throw new BadRequestException('Email already verified');
+      }
+
+      await this.usersService.updateUser({
+        where: { id: user.id },
+        data: { isEmailVerified: true },
+      });
     } catch (error) {
       if (error?.name === 'TokenExpiredError') {
         throw new BadRequestException('Email confirmation token expired');
@@ -179,7 +185,7 @@ export class AuthService {
     }
   }
 
-  async sendResetPasswordEmail(email: string) {
+  async sendResetPasswordEmail(email: string, origin: string) {
     const existingUser = await this.usersService.findOne({ email });
 
     if (!existingUser) {
@@ -205,7 +211,9 @@ export class AuthService {
       data: { resetPasswordToken },
     });
 
-    const url = `${process.env.RESET_PASSWORD_URL}?token=${resetPasswordToken}`;
+    const clientUrl = origin || process.env.CLIENT_URL;
+    const url = `${clientUrl}/reset-password?token=${resetPasswordToken}`;
+
     let text =
       'You are receiving this email because you have requested the reset of the password for your account.\n\n';
     text += `Please click on the following link ${url} to complete the process. The link will only be valid for 10 minutes.\n\n`;

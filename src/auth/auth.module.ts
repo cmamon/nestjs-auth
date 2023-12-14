@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { AccessTokenGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -27,6 +28,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
     JwtStrategy,
     PrismaService,
     RefreshTokenStrategy,
+    {
+      provide: 'APP_GUARD',
+      useClass: AccessTokenGuard,
+    },
   ],
 })
 export class AuthModule {}
