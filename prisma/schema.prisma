@@ -58,33 +58,36 @@ model Car {
 }
 
 model Trip {
-  id             Int           @id @default(autoincrement())
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              Int           @id @default(autoincrement())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   // relationships
-  driver         User          @relation(fields: [driverId], references: [id])
-  driverId       Int
-  car            Car           @relation(fields: [carId], references: [id])
-  carId          Int
-  passengers     User[]        @relation("PassengerTrips")
-  userReviews    UserReview[]
-  tripRequests   TripRequest[]
-  payments       Payment[]
-  locations      Location[] // the locations of the Trip (from, to, etc)
-  chatId         Int?
+  driver          User          @relation(fields: [driverId], references: [id])
+  driverId        Int
+  car             Car           @relation(fields: [carId], references: [id])
+  carId           Int
+  passengers      User[]        @relation("PassengerTrips")
+  userReviews     UserReview[]
+  tripRequests    TripRequest[]
+  payments        Payment[]
+  locations       Location[] // the locations of the Trip (from, to, etc)
+  chatId          Int?
   // fields
-  fromLocation   String
-  fromLatitude   Float
-  fromLongitude  Float
-  toLocation     String
-  toLatitude     Float
-  toLongitude    Float
-  departAt       DateTime
-  arriveAt       DateTime
-  price          Float
-  availableSeats Int
-  totalSeats     Int
-  status         TripStatus
+  fromLocation    String
+  fromLatitude    Float
+  fromLongitude   Float
+  toLocation      String
+  toLatitude      Float
+  toLongitude     Float
+  departAt        DateTime
+  arriveAt        DateTime
+  price           Float
+  availableSeats  Int
+  totalSeats      Int
+  status          TripStatus
+  duration        Int           @default(0)
+  distance        Int           @default(0)
+  encodedPolyline String        @default("")
 }
 
 enum TripStatus {
